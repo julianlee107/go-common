@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"time"
@@ -107,6 +108,47 @@ func (w *FileWriter) Write(r *Record) error {
 		return err
 	}
 	return nil
+}
+
+func (w *FileWriter) Rotate() error {
+
+	now := time.Now()
+	v := 0
+	rotate := false
+	oldVariables := make([]interface{}, len(w.variables))
+	copy(oldVariables, w.variables)
+
+	for i, act := range w.actions {
+		v = act(&now)
+		if v != w.variables[i] {
+			w.variables[i] = v
+			rotate = true
+		}
+	}
+	if rotate == false {
+		return nil
+	}
+
+	if w.fileBufWriter != nil {
+		if err := w.fileBufWriter.Flush(); err != nil {
+			return err
+		}
+	}
+
+	if w.file != nil {
+		// 将文件以pattern形式改名并关闭
+		filePath := fmt.Sprintf(w.pathFmt, oldVariables...)
+
+		if err := os.Rename(w.filename, filePath); err != nil {
+			return err
+		}
+
+		if err := w.file.Close(); err != nil {
+			return err
+		}
+	}
+
+	return w.CreateLogFile()
 }
 
 func (w *FileWriter) Flush() error {
