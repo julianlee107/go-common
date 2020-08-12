@@ -80,6 +80,9 @@ func NewLogger() *Logger {
 	logger.recordPool = &sync.Pool{New: func() interface{} {
 		return &Record{}
 	}}
+
+	go bootstrapLogWriter(logger)
+
 	return logger
 }
 
@@ -162,6 +165,63 @@ func (l *Logger) deliverRecordToWriter(level int, format string, args ...interfa
 	record.level = level
 
 	l.tunnel <- record
+}
+
+func bootstrapLogWriter(logger *Logger) {
+	if logger == nil {
+		panic("logger is nil")
+	}
+	var (
+		record *Record
+		ok     bool
+	)
+	if record, ok = <-logger.tunnel; !ok {
+		logger.c <- true
+		return
+	}
+	for _, w := range logger.writers {
+		if err := w.Write(record); err != nil {
+			log.Println(err)
+		}
+	}
+
+	flushTimer := time.NewTimer(time.Millisecond * 500)
+	rotateTimer := time.NewTimer(time.Second * 10)
+
+	for {
+		select {
+		case record, ok := <-logger.tunnel:
+			if !ok {
+				logger.c <- true
+				return
+			}
+			for _, w := range logger.writers {
+				if err := w.Write(record); err != nil {
+					log.Println(err)
+				}
+			}
+			logger.recordPool.Put(record)
+		case <-flushTimer.C:
+			for _, w := range logger.writers {
+				if f, ok := w.(Flusher); ok {
+					if err := f.Flush(); err != nil {
+						log.Println(err)
+					}
+				}
+			}
+			flushTimer.Reset(time.Millisecond * 500)
+		case <-rotateTimer.C:
+			for _, w := range logger.writers {
+				if f, ok := w.(Rotater); ok {
+					if err := f.Rotate(); err != nil {
+						log.Println(err)
+					}
+				}
+			}
+			rotateTimer.Reset(time.Second * 10)
+
+		}
+	}
 }
 
 // outside
