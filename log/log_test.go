@@ -12,10 +12,10 @@ func TestLogInstance(t *testing.T) {
 		Level: "trace",
 		FW: ConfigFileWriter{
 			On:              true,
-			LogPath:         "./log_test.log",
-			RotateLogPath:   "./log_test.log",
-			WfLogPath:       "./log_test.wf.log",
-			RotateWfLogPath: "./log_test.wf.log",
+			LogPath:         "./%Y-%M-%D_log_test.log",
+			RotateLogPath:   "./%Y-%M-%D_log_test.log",
+			WfLogPath:       "./%Y-%M-%D_log_test.wf.log",
+			RotateWfLogPath: "./%Y-%M-%D_log_test.wf.log",
 		},
 		CW: ConfConsoleWriter{
 			On:    true,
@@ -24,7 +24,6 @@ func TestLogInstance(t *testing.T) {
 	}
 	SetupInstanceWithConf(logConf, nlog)
 	nlog.Warn("test message")
-	time.Sleep(11 * time.Second)
 	nlog.Close()
-
+	time.Sleep(10 * time.Second)
 }

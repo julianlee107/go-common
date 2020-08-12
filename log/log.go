@@ -282,3 +282,8 @@ func defaultLoggerInit() {
 		defaultLogger = NewLogger()
 	}
 }
+
+func SetupDefaultLogWithConf(c Config) (err error) {
+	defaultLoggerInit()
+	return SetupInstanceWithConf(c, defaultLogger)
+}
