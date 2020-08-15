@@ -31,7 +31,13 @@ func GetConfEnv() string {
 func GetConfEnvPath() string {
 	return ConfEnvPath
 }
+func GetConfPath(fileName string) string {
+	return ConfEnvPath + "/" + fileName + ".toml"
+}
 
+func GetConfFilePath(fileName string) string {
+	return ConfEnvPath + "/" + fileName
+}
 func ParseConfig(path string, conf interface{}) (err error) {
 	file, err := os.Open(path)
 	if err != nil {

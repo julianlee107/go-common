@@ -1,6 +1,8 @@
 package log
 
-import "errors"
+import (
+	"errors"
+)
 
 type ConfigFileWriter struct {
 	On              bool   `toml:"On"`

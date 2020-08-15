@@ -1,30 +1,38 @@
 package main
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
-	"strings"
+	"github.com/julianlee107/go-common/lib"
+	"math/rand"
+	"net"
+	"os"
+	"time"
 )
 
 func main() {
-	m := make(map[string]interface{})
-	m["tag"] = "_undef"
-	m["traceId"] = "123123"
-	fmt.Println(parseParams(m))
+	fmt.Println(lib.IsSetConf("log.file_writer.log_path"))
 }
 
-func parseParams(m map[string]interface{}) string {
-	var tag = "_undef"
-	if _tag, ok := m["tag"]; ok {
-		if val, ok := _tag.(string); ok {
-			tag = val
-		}
+func calcTraceId(ip string) (traceId string) {
+	now := time.Now()
+	timestamp := uint32(now.Unix())
+	timeNano := now.UnixNano()
+	pid := os.Getpid()
+
+	b := bytes.Buffer{}
+	netIP := net.ParseIP(ip)
+	if netIP == nil {
+		b.WriteString("00000000")
+	} else {
+		b.WriteString(hex.EncodeToString(netIP.To4()))
 	}
-	for key, val := range m {
-		if key == "tag" {
-			continue
-		}
-		tag = tag + "||" + fmt.Sprintf("%v=%v", key, val)
-	}
-	tag = strings.Trim(fmt.Sprintf("%q", tag), "\"")
-	return tag
+	b.WriteString(fmt.Sprintf("%08x", timestamp&0xffffffff))
+	b.WriteString(fmt.Sprintf("%04x", timeNano&0xffff))
+	b.WriteString(fmt.Sprintf("%04x", pid&0xffff))
+	b.WriteString(fmt.Sprintf("%06x", rand.Int31n(1<<24)))
+	b.WriteString("b0") // 末两位标记来源,b0为go
+
+	return b.String()
 }
